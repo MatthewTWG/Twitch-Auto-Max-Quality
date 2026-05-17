@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Twitch-Auto-Max-Quality
 // @namespace   Twitch-Auto-Max-Quality
-// @version     0.5.0
+// @version     0.5.1
 // @author      Nomo
 // @description Always start playing live video with source quality on twitch.tv
 // @supportURL  https://github.com/nomomo/Twitch-Auto-Max-Quality/issues
@@ -351,9 +351,11 @@
 
                     // Worker fetch
                     var originalFetch2 = self.fetch;
+                    if(DEBUG_WORKER2) console.log("[TAMQ][WORKER] fetch wrapper installing");
                     self.fetch = async function(input, init){
-                        if(input.toLowerCase().indexOf(".m3u8") !== -1 
-                        && (input.toLowerCase().indexOf('usher.ttvnw.net/api/channel/hls') !== -1 || input.toLowerCase().indexOf('usher.ttvnw.net/vod/') !== -1)){
+                        try { if(DEBUG_WORKER2) console.log("[TAMQ][WORKER][FETCH]", String(input).slice(0, 200)); } catch(_){}
+                        if(input.toLowerCase().indexOf(".m3u8") !== -1
+                        && input.toLowerCase().indexOf('usher.ttvnw.net') !== -1){
                             var m3u8_fetch = await originalFetch2.apply(this, arguments);
                             var m3u8_text = await m3u8_fetch.text();
                             NOMO_DEBUG("\\n", input, "\\n", (new Date()), "\\n", m3u8_text);
@@ -375,26 +377,58 @@
                             ///////////////////////////////////////////////////
                             // only_source_quality
                             ///////////////////////////////////////////////////
-                            // Separate lines and extract headers
-                            const lines = m3u8_text.split('\\n');
-                            let headerEnd = 0;
-                            while (headerEnd < lines.length && !lines[headerEnd].startsWith('#EXT-X-MEDIA')) {
-                                headerEnd++;
-                            }
-                            const headerLines = lines.slice(0, headerEnd);
+                            // Separate lines; split on \\r?\\n so CRLF playlists also parse
+                            const lines = m3u8_text.split(/\\r?\\n/);
 
-                            // Collect STREAM-INF + URI + MEDIA pairs
-                            const entries = [];
-                            for (let i = headerEnd; i < lines.length; i++) {
-                                if (i + 2 <= lines.length && lines[i].startsWith('#EXT-X-MEDIA') && lines[i + 1].startsWith('#EXT-X-STREAM-INF') && lines[i + 2].startsWith('https')) {
-                                    const mediaLine = lines[i];
-                                    const infoLine  = lines[i+1];
-                                    const uriLine   = lines[i+2];
-                                    const bwMatch   = infoLine.match(/BANDWIDTH=(\\d+)/);
-                                    const bandwidth = bwMatch ? parseInt(bwMatch[1], 10) : 0;
-                                    entries.push({ mediaLine, infoLine, uriLine, bandwidth });
-                                    i = i + 2;
+                            // Diagnostic: structural counts (helps when the playlist format shifts)
+                            try {
+                                const mediaCount = lines.filter(l => l.startsWith('#EXT-X-MEDIA')).length;
+                                const streamInfCount = lines.filter(l => l.startsWith('#EXT-X-STREAM-INF')).length;
+                                const httpsCount = lines.filter(l => l.startsWith('https')).length;
+                                NOMO_DEBUG("playlist stats - total:", lines.length, "MEDIA:", mediaCount, "STREAM-INF:", streamInfCount, "https:", httpsCount);
+                                const firstStreamIdx = lines.findIndex(l => l.startsWith('#EXT-X-STREAM-INF'));
+                                if (firstStreamIdx !== -1) {
+                                    NOMO_DEBUG("first STREAM-INF:", lines[firstStreamIdx]);
+                                    NOMO_DEBUG("line before STREAM-INF:", lines[firstStreamIdx - 1]);
+                                    NOMO_DEBUG("line after STREAM-INF:", lines[firstStreamIdx + 1]);
                                 }
+                            } catch(_) {}
+
+                            // Header = everything before first variant marker (MEDIA or STREAM-INF)
+                            let variantStart = 0;
+                            while (variantStart < lines.length
+                                && !lines[variantStart].startsWith('#EXT-X-MEDIA')
+                                && !lines[variantStart].startsWith('#EXT-X-STREAM-INF')) {
+                                variantStart++;
+                            }
+                            const headerLines = lines.slice(0, variantStart);
+
+                            // Parse variants: optional #EXT-X-MEDIA, then #EXT-X-STREAM-INF, then URL
+                            const entries = [];
+                            let i = variantStart;
+                            while (i < lines.length) {
+                                let mediaLine = '';
+                                if (lines[i] && lines[i].startsWith('#EXT-X-MEDIA')) {
+                                    mediaLine = lines[i];
+                                    i++;
+                                    if (i >= lines.length) break;
+                                }
+                                if (!lines[i] || !lines[i].startsWith('#EXT-X-STREAM-INF')) {
+                                    i++;
+                                    continue;
+                                }
+                                const infoLine = lines[i];
+                                i++;
+                                // URL is the next non-empty non-tag line
+                                while (i < lines.length && (lines[i].length === 0 || lines[i].startsWith('#'))) {
+                                    i++;
+                                }
+                                if (i >= lines.length) break;
+                                const uriLine = lines[i];
+                                i++;
+                                const bwMatch = infoLine.match(/BANDWIDTH=(\\d+)/);
+                                const bandwidth = bwMatch ? parseInt(bwMatch[1], 10) : 0;
+                                entries.push({ mediaLine, infoLine, uriLine, bandwidth });
                             }
 
                             // error case
@@ -408,20 +442,32 @@
                                 return originalFetch2.apply(this, args);
                             }
 
-                            // The default is no longer sorted by quality
-                            // Sort bandwidth in descending order
+                            // Sort bandwidth descending so entries[0] is highest quality
                             entries.sort((a, b) => b.bandwidth - a.bandwidth);
                             NOMO_DEBUG("sorted entries:", entries);
 
-                            // Get quality name from mediaLine and infoLine
+                            // Build a searchable quality label per entry; works with or without MEDIA tag
                             const cleanLabels = [];
                             for (let entry of entries) {
-                                // GROUP-ID
-                                const grpMatch = entry.infoLine.match(/VIDEO="([^"]+)"/);
-                                const grp = grpMatch ? grpMatch[1].toLowerCase() : '';
-                                let nm = entry.mediaLine.match(/NAME="([^"]+)"/);
-                                cleanLabels.push((grp + " " + nm).trim());
+                                let label = '';
+                                if (entry.mediaLine) {
+                                    const grpMatch = entry.infoLine.match(/VIDEO="([^"]+)"/);
+                                    const grp = grpMatch ? grpMatch[1].toLowerCase() : '';
+                                    const nmMatch = entry.mediaLine.match(/NAME="([^"]+)"/);
+                                    const nm = nmMatch ? nmMatch[1].toLowerCase() : '';
+                                    label = (grp + " " + nm).trim();
+                                }
+                                if (!label) {
+                                    // Fall back to RESOLUTION + FRAME-RATE from STREAM-INF
+                                    const resMatch = entry.infoLine.match(/RESOLUTION=\\d+x(\\d+)/i);
+                                    const fpsMatch = entry.infoLine.match(/FRAME-RATE=([\\d.]+)/i);
+                                    const height = resMatch ? parseInt(resMatch[1], 10) : 0;
+                                    const fps = fpsMatch ? Math.round(parseFloat(fpsMatch[1])) : 30;
+                                    if (height) label = height + "p" + fps;
+                                }
+                                cleanLabels.push(label);
                             }
+                            NOMO_DEBUG("cleanLabels:", cleanLabels);
 
                             // Find target entry from q1 and q2
                             let q1 = ${"\""+GM_SETTINGS.only_source_quality_prefer_1st.toLowerCase()+"\""};

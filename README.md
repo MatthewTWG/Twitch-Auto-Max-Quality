@@ -32,6 +32,13 @@ nomotg@gmail.com
 
 ## Change log
 
+### 0.5.1 (2026-05-17)
+
+- Fixed compatibility with Twitch's 2025 HLS playlist format which dropped `#EXT-X-MEDIA` tags.
+- Updated master playlist URL matcher to handle the new `/api/v2/` path.
+- Added `RESOLUTION` + `FRAME-RATE` fallback for quality label extraction when `#EXT-X-MEDIA` tags are absent.
+- Tolerate CRLF line endings when parsing playlists.
+
 ### 0.5.0 (2025-07-13)
 
 - The "Only the quality you want" method now supports 2160p and 1440p.
