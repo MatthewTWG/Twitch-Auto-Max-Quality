@@ -5,7 +5,7 @@
 [![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/nomomo/Twitch-Auto-Max-Quality/blob/master/README.md)
 -->
 
-> **Important: As a Korean developer, I no longer plan to actively maintain this script as Twitch has shut down operations in South Korea. Check [this article](https://blog.twitch.tv/en/2023/12/05/an-update-on-twitch-in-korea/) for more information.**
+> Maintained fork of [nomomo/Twitch-Auto-Max-Quality](https://github.com/nomomo/Twitch-Auto-Max-Quality). The original author stepped back from active maintenance after Twitch withdrew from South Korea — all credit for the original work goes to [@nomomo](https://github.com/nomomo). This fork updates the script for Twitch player changes since then.
 
 - Always start playing live video with the quality you want on twitch.tv.
 - Prevent automatic change of video quality when tab is disabled.
@@ -24,11 +24,11 @@ This script may not work properly on script managers other than Tampermonkey.
 
 ### STEP 2. UserScript
 
-- [Install](https://raw.githubusercontent.com/nomomo/Twitch-Auto-Max-Quality/master/Twitch-Auto-Max-Quality.user.js) from [https://raw.githubusercontent.com/nomomo/Twitch-Auto-Max-Quality/master/Twitch-Auto-Max-Quality.user.js](https://raw.githubusercontent.com/nomomo/Twitch-Auto-Max-Quality/master/Twitch-Auto-Max-Quality.user.js)
+- [Install](https://raw.githubusercontent.com/MatthewTWG/Twitch-Auto-Max-Quality/master/Twitch-Auto-Max-Quality.user.js) from [https://raw.githubusercontent.com/MatthewTWG/Twitch-Auto-Max-Quality/master/Twitch-Auto-Max-Quality.user.js](https://raw.githubusercontent.com/MatthewTWG/Twitch-Auto-Max-Quality/master/Twitch-Auto-Max-Quality.user.js)
 
 ## Bug report
 
-nomotg@gmail.com
+matthewtwgt@gmail.com or [open an issue](https://github.com/MatthewTWG/Twitch-Auto-Max-Quality/issues).
 
 ## Change log
 

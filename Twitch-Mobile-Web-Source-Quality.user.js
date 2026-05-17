@@ -5,10 +5,10 @@
 // @author      Nomo
 // @description Set source video quality on m.twitch.tv
 // @icon        https://raw.githubusercontent.com/nomomo/Twitch-Auto-Max-Quality/master/images/logo.png
-// @supportURL  https://github.com/nomomo/Twitch-Auto-Max-Quality/issues
-// @homepageURL https://github.com/nomomo/Twitch-Auto-Max-Quality/
-// @downloadURL https://raw.githubusercontent.com/nomomo/Twitch-Auto-Max-Quality/master/Twitch-Mobile-Web-Source-Quality.user.js
-// @updateURL   https://raw.githubusercontent.com/nomomo/Twitch-Auto-Max-Quality/master/Twitch-Mobile-Web-Source-Quality.user.js
+// @supportURL  https://github.com/MatthewTWG/Twitch-Auto-Max-Quality/issues
+// @homepageURL https://github.com/MatthewTWG/Twitch-Auto-Max-Quality/
+// @downloadURL https://raw.githubusercontent.com/MatthewTWG/Twitch-Auto-Max-Quality/master/Twitch-Mobile-Web-Source-Quality.user.js
+// @updateURL   https://raw.githubusercontent.com/MatthewTWG/Twitch-Auto-Max-Quality/master/Twitch-Mobile-Web-Source-Quality.user.js
 // @include     *://m.twitch.tv/*
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @run-at      document-start
